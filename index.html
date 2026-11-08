@@ -1,1 +1,319 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sam's Cheesegiving 🧀</title>
+<style>
+*{box-sizing:border-box}
+:root{--wine:#762c43;--ink:#4c3340}
+body{margin:0;padding-bottom:105px;color:var(--ink);font-family:Arial,sans-serif;background:#f6dfe0;background-image:linear-gradient(90deg,#ffffff55 50%,transparent 50%),linear-gradient(#ffffff55 50%,transparent 50%);background-size:34px 34px}
+main{max-width:680px;margin:auto;padding:17px}
+h1,h2{font-family:Georgia,serif;color:var(--wine)}
+h1{font-size:clamp(42px,10vw,67px);margin:12px 0}
+h2{font-size:27px;margin:0 0 10px}
+.hero,.card{border:2px solid #a87985;border-radius:22px;padding:23px 18px;margin:17px 0;background:#fffaf1}
+.hero{text-align:center;padding:35px 18px;box-shadow:6px 6px 0 #762c4320}
+.slogan{font-family:Georgia,serif;font-size:21px;font-style:italic;color:var(--wine)}
+.date{font-weight:bold;font-size:20px;line-height:1.6}
+.cheese{background:#fff0c8}
+.meat{background:#f9d9d8}
+.vessel{background:#e3eed8}
+.extras{background:#f5e1ed}
+.drinks{background:#dce8f3}
+p{line-height:1.55}
+a{color:var(--wine)}
+.pills{display:flex;flex-wrap:wrap;gap:9px}
+.pill{border:1px solid #9c7981;border-radius:30px;background:#fffdf8;padding:11px 14px;font-size:14px;color:var(--ink);cursor:pointer}
+.pill.selected{background:var(--wine);color:white}
+.pill.taken{opacity:.45;text-decoration:line-through;cursor:not-allowed}
+.small{font-size:13px;opacity:.8}
+.ribbon{display:inline-block;background:var(--wine);color:white;border-radius:20px;padding:7px 11px;font-size:11px;font-weight:bold;margin-bottom:12px}
+.custom{display:flex;gap:8px;margin-top:16px}
+input,textarea{width:100%;min-width:0;padding:13px;border:1px solid #ad8f94;border-radius:11px;font:inherit;background:white}
+button{font:inherit;cursor:pointer}
+.add,.primary{background:var(--wine);color:white;border:0;border-radius:11px;padding:12px 15px;font-weight:bold}
+.primary{width:100%;padding:16px}
+.primary:disabled{opacity:.5}
+.roster-item{padding:12px 0;border-bottom:1px solid #e4d1d4}
+.tag{display:inline-block;background:#f0e1dc;border-radius:20px;padding:7px 11px;margin:4px;font-size:13px}
+.bar{position:fixed;bottom:0;left:0;right:0;background:#fffaf1;border-top:2px solid var(--wine);padding:13px;z-index:5;box-shadow:0 -3px 15px #0001}
+.bar-inner{max-width:680px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bar strong{color:var(--wine)}
+footer{text-align:center;font-size:12px;padding:15px}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<div style="letter-spacing:3px;font-size:12px;font-weight:bold">YOU'RE INVITED TO</div>
+<h1>Cheesegiving!</h1>
+<p class="slogan">Good cheese, good friends and Gouda times.</p>
+<div style="font-size:44px">🧀 🍇 🥂</div>
+<p>This is going to be <b>grate!</b> Come for the cheese, stay for the company.</p>
+<div class="date">Saturday 28 November 2026<br>From 11am</div>
+<p>Hosted by Sam 💕</p>
+<p>📍 7 Wylie Street, Wangaratta</p>
+<p><a href="https://www.google.com/maps/search/?api=1&query=7+Wylie+Street+Wangaratta" target="_blank">Get directions</a></p>
+<a id="calendar" href="#">📅 Add to calendar</a>
+</section>
+
+<section class="card">
+<h2>Let's get this party cheddar! 🧀</h2>
+<p>Bring <b>two things</b> to help make the ultimate Cheesegiving spread.</p>
+<p>Pick from the options below or add your own. Once someone claims an item, it's crossed off the list.</p>
+<p><b>Exception:</b> Prosecco is always welcome. There's no such thing as too many bubbles! 🥂</p>
+<p class="small">No need to be fancy. Just bring something delicious and your best cheese-loving self.</p>
+</section>
+
+<div id="categories"></div>
+
+<section class="card" id="rsvp">
+<h2>Brie there or brie square! 💌</h2>
+<p>Ready to join the cheese crew? Choose your two contributions and pop your name below.</p>
+<div id="chosen">Nothing selected yet.</div>
+<p><label for="guest">Your name</label></p>
+<input id="guest" maxlength="60" placeholder="Your name">
+<p id="message" role="status"></p>
+<button id="submit" class="primary">Count me in! 🧀</button>
+</section>
+
+<section class="card">
+<h2>Who's bringing what? 🍇</h2>
+<p>Let's see what our cheese crew has claimed!</p>
+<div id="roster">Loading the guest list...</div>
+<button id="refresh" class="add" style="margin-top:16px">↻ Refresh guest list</button>
+</section>
+
+<footer>Life is Gouda when we're together. 🧀💕</footer>
+</main>
+
+<div class="bar">
+<div class="bar-inner">
+<div>
+<strong id="count">0 of 2 selected</strong>
+<div class="small" id="summary">Pick your first thing!</div>
+</div>
+<button id="jump" class="add">RSVP →</button>
+</div>
+</div>
+
+<script>
+const URL_BASE="https://bpvxnljntqinkduwsohm.supabase.co";
+const API_KEY="sb_publishable_D1gQ-8kP3Wzd_pbmoIdIXw_MHvJ8vX7";
+
+const groups=[
+{
+id:"Cheese",cls:"cheese",
+desc:"Soft, sharp, creamy or crumbly. Say cheese!",
+items:["Goat cheese","Truffle cheese","Aged cheddar","Sharp cheddar","Burrata","Camembert","Cream cheese"]
+},
+{
+id:"Sliced meat",cls:"meat",
+desc:"A little something savoury for the cheese board.",
+ribbon:true,
+items:["Prosciutto","Salami","Soppressata","Spanish chorizo","Capicola","Pâté","Ham"]
+},
+{
+id:"Vessel",cls:"vessel",
+desc:"Crackers, bread and all the delicious things you put cheese on.",
+ribbon:true,
+items:["Crackers","Ritz crackers","Seeded crackers","Gluten-free crackers","Baguette slices","Crostini","Breadsticks","Pretzel thins","Pita chips"]
+},
+{
+id:"The Extras",cls:"extras",
+desc:"All the delicious little extras that make a cheese board even better!",
+items:["Fig spread","Honey","Quince paste","Olive tapenade","Nuts","Berries","Cherry tomatoes","Apple slices","Pear slices","Peaches","Dried fruit","Chocolate","Mustard"]
+},
+{
+id:"Wine or a drink",cls:"drinks",
+desc:"Something to sip while we get our cheese on. Cheers!",
+items:["Pinot Noir","Gamay","Chardonnay","Sauvignon Blanc","Pinot Grigio","Riesling","Rosé","Prosecco","Bubbly","Cocktails","Mocktails","Sparkling water"]
+}
+];
+
+let selected=[];
+let contributions=[];
+let extras={};
+let saving=false;
+const el=id=>document.getElementById(id);
+const makeKey=(g,i)=>g+"::"+i;
+const parse=s=>{
+let p=s.indexOf("::");
+return p<0?{group:"",item:s}:{group:s.slice(0,p),item:s.slice(p+2)};
+};
+const unlimited=s=>parse(s).item.toLowerCase()==="prosecco";
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+function taken(s){
+if(unlimited(s))return false;
+let name=parse(s).item.toLowerCase();
+return contributions.some(c=>(c.items||[]).some(x=>
+!unlimited(x)&&parse(x).item.toLowerCase()===name));
+}
+function toggle(s){
+if(selected.includes(s)){
+selected=selected.filter(x=>x!==s);
+}else if(selected.length===2){
+alert("Just two things, please! Remove one before choosing another.");
+return;
+}else if(taken(s)){
+alert("That one's already claimed. Try something else!");
+return;
+}else selected.push(s);
+render();
+}
+function render(){
+const root=el("categories");
+root.innerHTML="";
+groups.forEach(g=>{
+let card=document.createElement("section");
+card.className="card "+g.cls;
+let all=[...g.items,...(extras[g.id]||[])];
+card.innerHTML=(g.ribbon?'<div class="ribbon">WE NEED MORE OF THESE</div>':"")+
+"<h2>"+escapeHTML(g.id)+"</h2>"+
+"<p>"+escapeHTML(g.desc)+"</p>"+
+'<p class="small">'+contributions.flatMap(c=>c.items||[]).filter(s=>parse(s).group===g.id).length+" contributions claimed</p>";
+let pills=document.createElement("div");
+pills.className="pills";
+all.forEach(item=>{
+let s=makeKey(g.id,item);
+let b=document.createElement("button");
+b.type="button";
+b.className="pill"+(selected.includes(s)?" selected":"")+(taken(s)&&!selected.includes(s)?" taken":"");
+b.textContent=item+(unlimited(s)?" ∞":"");
+b.disabled=taken(s)&&!selected.includes(s);
+b.onclick=()=>toggle(s);
+pills.appendChild(b);
+});
+card.appendChild(pills);
+let custom=document.createElement("div");
+custom.className="custom";
+let input=document.createElement("input");
+input.placeholder="Other – add your own...";
+input.maxLength=80;
+input.setAttribute("aria-label","Other "+g.id);
+let add=document.createElement("button");
+add.type="button";
+add.className="add";
+add.textContent="+ Add";
+add.onclick=()=>{
+let value=input.value.trim().replace(/\s+/g," ");
+if(!value)return;
+let existing=all.find(x=>x.toLowerCase()===value.toLowerCase());
+let item=existing||value;
+let s=makeKey(g.id,item);
+if(taken(s)){
+alert("Someone's already bringing that!");
+return;
+}
+if(!existing)(extras[g.id]??=[]).push(value);
+if(!selected.includes(s))toggle(s);
+else render();
+};
+input.onkeydown=e=>{
+if(e.key==="Enter"){e.preventDefault();add.click()}
+};
+custom.append(input,add);
+card.appendChild(custom);
+root.appendChild(card);
+});
+el("count").textContent=selected.length+" of 2 selected";
+el("summary").textContent=selected.length?selected.map(s=>parse(s).item).join(" + "):"Pick your first thing!";
+el("chosen").innerHTML=selected.length?selected.map(s=>'<span class="tag">'+escapeHTML(parse(s).item)+'</span>').join(""):"Nothing selected yet.";
+el("submit").disabled=saving||selected.length!==2;
+}
+function renderRoster(){
+const root=el("roster");
+root.innerHTML="";
+if(!contributions.length){
+root.textContent="Be the first to claim something! 🧀";
+return;
+}
+contributions.forEach(c=>{
+let div=document.createElement("div");
+div.className="roster-item";
+let strong=document.createElement("strong");
+strong.textContent=c.guest_name;
+let items=document.createElement("div");
+items.textContent=(c.items||[]).map(s=>parse(s).item).join(" + ");
+div.append(strong,items);
+root.appendChild(div);
+});
+}
+async function api(path,options={}){
+let response=await fetch(URL_BASE+"/rest/v1/"+path,{
+...options,
+headers:{
+"apikey":API_KEY,
+"Content-Type":"application/json",
+...(options.headers||{})
+}
+});
+if(!response.ok)throw Error("Database request failed: "+response.status);
+if(response.status===204)return null;
+return response.json();
+}
+async function load(){
+try{
+contributions=await api("contributions?select=id,guest_name,items,created_at&order=created_at.asc");
+render();
+renderRoster();
+return true;
+}catch(e){
+console.error(e);
+el("roster").textContent="Guest list couldn't load. Please try refreshing.";
+return false;
+}
+}
+el("submit").onclick=async()=>{
+let name=el("guest").value.trim();
+if(!name){
+el("message").textContent="Don't forget your name!";
+return;
+}
+if(selected.length!==2)return;
+saving=true;
+render();
+el("message").textContent="Saving your RSVP...";
+try{
+if(!await load())throw Error("Couldn't verify current claims");
+if(selected.some(taken)){
+el("message").textContent="Someone just claimed one of your picks. Choose another!";
+return;
+}
+await api("contributions",{
+method:"POST",
+headers:{"Prefer":"return=minimal"},
+body:JSON.stringify({guest_name:name,items:selected})
+});
+el("message").textContent="You're officially part of the cheese crew! See you there! 🧀🥂";
+selected=[];
+el("guest").value="";
+await load();
+}catch(e){
+console.error(e);
+el("message").textContent="Your RSVP couldn't be confirmed. Please try again.";
+}finally{
+saving=false;
+render();
+}
+};
+el("refresh").onclick=load;
+el("jump").onclick=()=>el("rsvp").scrollIntoView({behavior:"smooth"});
+el("calendar").href="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+
+encodeURIComponent("Sam's Cheesegiving")+
+"&dates=20261128T110000/20261128T150000"+
+"&ctz=Australia%2FMelbourne"+
+"&details="+encodeURIComponent("Good cheese, good friends and Gouda times! Starts at 11am; finish time is flexible.")+
+"&location="+encodeURIComponent("7 Wylie Street, Wangaratta VIC");
+render();
+load();
+setInterval(load,30000);
+</script>
+</body>
+</html>
+
+
